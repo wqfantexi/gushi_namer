@@ -1,9 +1,9 @@
 $(function() {
     console.log('ready');
     $('#btn-go').on('click', function() {
-            refreshName(10)
+        var num = parseInt($('#name-num').val());
+            refreshName(num)
         })
-        // refreshName(3);
     function refreshName(num) {
         var jsonFilename = $('select').val();
         $.ajax({
@@ -19,15 +19,15 @@ $(function() {
                         cnt++;
                     }
                 }
-                $('ul').html(html);
+                $('table').html(html);
             }
         })
     }
 
     function name2html(nameObj) {
-        var familyName = $('input[type=text]').val();
+        var familyName = $('#family-name').val();
         nameObj['familyName'] = familyName;
-        var template = "<li class='name-box'><h3>{{familyName}}{{name}}</h3><p class='sentence'><span>「</span>{{sentence}}<span>」</span></p><p class = 'book'>{{book}}•{{title}}</p><p class = 'author'>[{{dynasty}}]{{author}}</p></li>";
+        var template = "<tr><td>{{familyName}}{{name}}</td><td>{{sentence}}</td><td>{{book}}·{{title}}</td><td>{{dynasty}}</td><td>{{author}}</td><tr>";
         return getHtmlFromTemplate(template, nameObj);
     }
 
@@ -132,7 +132,7 @@ $(function() {
     }
 
     function hasBanWord(str) {
-        var banStr = '鸟鸡我邪罪凶丑仇鼠蟋蟀淫秽妹狐鸡鸭蝇悔鱼肉苦犬吠窥血丧饥女搔父母昏狗蟊疾病痛死潦哀痒害蛇牲妇狸鹅穴畜烂兽靡爪氓劫鬣螽毛婚姻匪婆羞辱';
+        var banStr = '名穷留恨惨鸟鸡我邪罪凶丑仇鼠蟋蟀淫秽妹狐鸡鸭蝇悔鱼肉苦犬吠窥血丧饥女搔父母昏狗蟊疾病痛死潦哀痒害蛇牲妇狸鹅穴畜烂兽靡爪氓劫鬣螽毛婚姻匪婆羞辱';
         var banArr = banStr.split('');
         // console.log(banArr);
         for (var i = 0; i < banArr.length; i++) {
