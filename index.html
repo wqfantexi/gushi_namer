@@ -1,45 +1,146 @@
-<!DOCTYPE html>
-<html>
+$(function() {
+    console.log('ready');
+    $('#btn-go').on('click', function() {
+        var num = parseInt($('#name-num').val());
+            refreshName(num)
+        })
+    function refreshName(num) {
+        var jsonFilename = $('select').val();
+        $.ajax({
+            url: jsonFilename,
+            dataType: 'json',
+            success: function(dataArr) {
+                var html = '';
+                var cnt = 0;
+                while (cnt < num) {
+                    var nameObj = genName(dataArr);
+                    if (!hasBanWord(nameObj.name)) {
+                        html += name2html(nameObj);
+                        cnt++;
+                    }
+                }
+                $('table').html(html);
+            }
+        })
+    }
 
-<head>
-    <title>你的名字</title>
-    <meta charset="utf-8">
-    <!-- <meta name='viewport' content="with=device-width,initial-scale = 1,user-scalable=no"> -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <link rel="stylesheet" type="text/css" href="style.css">
-</head>
+    function name2html(nameObj) {
+        var familyName = $('#family-name').val();
+        nameObj['familyName'] = familyName;
+        var template = "<tr><td>{{familyName}}{{name}}</td><td>{{sentence}}</td><td>{{book}}·{{title}}</td><td>{{dynasty}}</td><td>{{author}}</td><tr>";
+        return getHtmlFromTemplate(template, nameObj);
+    }
 
-<body>
-    <div class="wrapper">
-        <div class="input-box">
-            <h3>你的名字<small> 古诗文起名V1.1</small></h3>
-            <p>
-                <label for='src-select'>来源
-                </label>
-                <select name='src-select'>
-                    <option value='json/shijing.json'>诗经</option>
-                    <option value='json/chuci.json'>楚辞</option>
-                    <option value='json/tangshi.json'>唐诗</option>
-                    <option value='json/songci.json'>宋词</option>
-                    <option value='json/yuefu.json'>乐府诗集</option>
-                    <option value='json/gushi.json'>古诗三百首</option>
-                    <option value='json/cifu.json'>辞赋</option>
-                </select>
-            </p>
-            <p>
-                <label for='family-name'>姓氏 </label>
-                <input type="text" name="family-name" value="李" placeholder="输入姓氏">
-            </p>
-            <!-- <input type="button" value="生成姓名" id='btn-go'> -->
-            <div id='btn-go'>起名</div>
-        </div>
-        <ul>
-            <li class='name-box'>
-            </li>
-        </ul>
-    </div>
-    <script src="http://cdn.bootcss.com/jquery/1.11.1/jquery.min.js"></script>
-    <script src="namer.js"></script>
-</body>
+    function getHtmlFromTemplate(template, dataJson) {
+        var html = template;
+        for (var key in dataJson) {
+            var reg = new RegExp('{{' + key + '}}', 'g');
+            html = html.replace(reg, dataJson[key]);
+        }
+        return html;
+    }
 
-</html>
+    function genRandPoem(dataArr) {
+        var index = randBetween(0, dataArr.length);
+        while (!dataArr[index].content) {
+            index = randBetween(0, dataArr.length);
+        }
+        return dataArr[index];
+    }
+
+    function randBetween(min, max) {
+        //[min,max)  max is not included
+        return min + Math.floor(Math.random() * (max - min));
+    }
+
+    function splitSentence(str) {
+        str = cleanStr(str);
+        str = str.replace(/！|。|？|；/g, function(str) {
+            return str + '|';
+        })
+        str = str.replace(/\|$/g, '');
+        var arr = str.split('|');
+        arr = arr.filter(function(item) {
+            return item.length >= 2;
+        })
+        return arr;
+    }
+
+    function cleanStr(str) {
+        str = str.replace(/\s|<br>|<p>|<\/p>|　|”|“/g, '');
+        str = str.replace(/\(.+\)/g, '');
+        return str
+    }
+
+    function randCharFromStr(str, num, ordered) {
+        if (typeof ordered === 'undefined') {
+            ordered = true;
+        }
+        var randNumArr = genRandNumArr(str.length, num);
+        if (ordered) {
+            randNumArr = randNumArr.sort(function(a, b) {
+                return a - b;
+            });
+        }
+        var res = '';
+        for (var i = 0; i < randNumArr.length; i++) {
+            res += str.charAt(randNumArr[i]);
+        }
+        return res;
+    }
+
+    function genRandNumArr(max, num) {
+        if (num > max) {
+            num = max;
+            console.log('max=' + max + ' num = ' + num);
+            // throw new Error('too large num');
+        }
+        var orderedNum = [];
+        for (var i = 0; i < max; i++) {
+            orderedNum.push(i);
+        }
+        var res = [];
+        for (var i = 0; i < num; i++) {
+            var randIndex = randBetween(0, orderedNum.length);
+            var randNum = orderedNum[randIndex];
+            res.push(randNum);
+            orderedNum.splice(randIndex, 1);
+            // console.log('i=' + i + 'rand=' + rand, orderedNum);
+        }
+        return res;
+    }
+
+    function genName(dataArr) {
+        var randPoem = genRandPoem(dataArr);
+        var sentences = splitSentence(randPoem.content);
+        var randSentence = sentences[randBetween(0, sentences.length)];
+        var name = {};
+        name.title = randPoem.title;
+        name.book = randPoem.book;
+        name.sentence = randSentence;
+        name.content = randPoem.content;
+        name.author = randPoem.author ? randPoem.author : '佚名';
+        name.dynasty = randPoem.dynasty;
+        var cleanSentence = cleanPunctuation(randSentence);
+        name.name = randCharFromStr(cleanSentence, 2);
+        return name
+    }
+    //清除标点符号
+    function cleanPunctuation(str) {
+        var puncReg = /[<>《》！*\(\^\)\$%~!@#…&%￥—\+=、。，？；‘’“”：·`]/g;
+        return str.replace(puncReg, '');
+    }
+
+    function hasBanWord(str) {
+        var banStr = '名穷留恨惨鸟鸡我邪罪凶丑仇鼠蟋蟀淫秽妹狐鸡鸭蝇悔鱼肉苦犬吠窥血丧饥女搔父母昏狗蟊疾病痛死潦哀痒害蛇牲妇狸鹅穴畜烂兽靡爪氓劫鬣螽毛婚姻匪婆羞辱';
+        var banArr = banStr.split('');
+        // console.log(banArr);
+        for (var i = 0; i < banArr.length; i++) {
+            if (str.indexOf(banArr[i]) !== -1) {
+                // console.log(str, banArr[i]);
+                return true;
+            }
+        }
+        return false;
+    }
+});
